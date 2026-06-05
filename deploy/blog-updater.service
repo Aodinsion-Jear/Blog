@@ -1,0 +1,29 @@
+# /etc/systemd/system/blog-updater.service
+#
+# 安装：
+#   sudo cp /opt/blog/deploy/blog-updater.sh /usr/local/bin/blog-updater.sh
+#   sudo chmod +x /usr/local/bin/blog-updater.sh
+#   sudo cp /opt/blog/deploy/blog-updater.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now blog-updater
+#
+# 查看日志：journalctl -u blog-updater -f
+
+[Unit]
+Description=Blog updater (watches data/update.request, pulls and redeploys)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+# 默认 root：肯定有 git + docker 权限。
+# 想换成更小权限：把 User 改成 docker 组内、且对 /opt/blog 有写权限的用户。
+User=root
+Environment=BLOG_REPO_DIR=/opt/blog
+Environment=BLOG_BRANCH=main
+ExecStart=/usr/local/bin/blog-updater.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
