@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import matter from "gray-matter";
-import { POSTS_DIR, safeJoinPost } from "./paths";
+import { readCategoryFile } from "./categories";
+import { POSTS_DIR, safeJoinPost, sanitizeCategoryName, sanitizeSlug } from "./paths";
 import { getAllPosts } from "./posts";
 
 export async function listPostFiles(): Promise<string[]> {
@@ -96,4 +97,113 @@ export async function setOrderForCategory(category: string, slugs: string[]): Pr
     const newFrontmatter = { ...post.rawFrontmatter, order: i + 1 };
     await writePostFile(slug, newFrontmatter, post.content);
   }
+}
+
+export type CategoryPostOrder = {
+  category: string;
+  slugs: string[];
+};
+
+export type SetOrderAcrossCategoriesResult = {
+  touchedCategories: string[];
+  movedSlugs: string[];
+  updatedCount: number;
+};
+
+export async function setOrderAcrossCategories(
+  categories: CategoryPostOrder[],
+): Promise<SetOrderAcrossCategoriesResult> {
+  const posts = await getAllPosts();
+  const bySlug = new Map(posts.map((post) => [post.slug, post]));
+  const categoryRecords = await readCategoryFile();
+  const knownCategories = new Set([
+    ...categoryRecords.map((record) => record.name),
+    ...posts.map((post) => post.category),
+  ]);
+  const categoryNames = new Set<string>();
+  const payloadSlugs = new Set<string>();
+
+  for (const item of categories) {
+    let category: string;
+    try {
+      category = sanitizeCategoryName(item.category);
+    } catch {
+      throw Object.assign(new Error("invalid category"), { code: "BAD_REQUEST" });
+    }
+
+    if (category !== item.category || categoryNames.has(category)) {
+      throw Object.assign(new Error("invalid categories"), { code: "BAD_REQUEST" });
+    }
+    if (!knownCategories.has(category)) {
+      throw Object.assign(new Error(`unknown category ${category}`), { code: "BAD_REQUEST" });
+    }
+    categoryNames.add(category);
+
+    for (const rawSlug of item.slugs) {
+      let slug: string;
+      try {
+        slug = sanitizeSlug(rawSlug);
+      } catch {
+        throw Object.assign(new Error("invalid slug"), { code: "BAD_REQUEST" });
+      }
+      if (slug !== rawSlug || payloadSlugs.has(slug)) {
+        throw Object.assign(new Error("duplicate or invalid slug"), { code: "BAD_REQUEST" });
+      }
+      if (!bySlug.has(slug)) {
+        throw Object.assign(new Error("分类或文章列表已变化，请刷新后重试"), {
+          code: "BAD_REQUEST",
+        });
+      }
+      payloadSlugs.add(slug);
+    }
+  }
+
+  if (payloadSlugs.size !== posts.length) {
+    throw Object.assign(new Error("分类或文章列表已变化，请刷新后重试"), {
+      code: "BAD_REQUEST",
+    });
+  }
+
+  const touchedCategories = new Set<string>();
+  const movedSlugs = new Set<string>();
+  let updatedCount = 0;
+
+  for (const item of categories) {
+    const category = sanitizeCategoryName(item.category);
+    item.slugs.forEach((slug, index) => {
+      const post = bySlug.get(slug)!;
+      const nextOrder = index + 1;
+      if (post.category !== category) {
+        touchedCategories.add(post.category);
+        touchedCategories.add(category);
+        movedSlugs.add(slug);
+      } else if (post.order !== nextOrder) {
+        touchedCategories.add(category);
+      }
+    });
+  }
+
+  for (const item of categories) {
+    const category = sanitizeCategoryName(item.category);
+    for (let index = 0; index < item.slugs.length; index++) {
+      const slug = item.slugs[index];
+      const post = bySlug.get(slug)!;
+      const nextOrder = index + 1;
+      if (post.category === category && post.order === nextOrder) continue;
+
+      const newFrontmatter = {
+        ...post.rawFrontmatter,
+        category,
+        order: nextOrder,
+      };
+      await writePostFile(slug, newFrontmatter, post.content);
+      updatedCount++;
+    }
+  }
+
+  return {
+    touchedCategories: Array.from(touchedCategories),
+    movedSlugs: Array.from(movedSlugs),
+    updatedCount,
+  };
 }

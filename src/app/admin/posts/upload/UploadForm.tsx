@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 type Props = { categories: string[] };
@@ -35,15 +35,7 @@ export function UploadForm({ categories }: Props) {
   const [slug, setSlug] = useState("");
   const [overwrite, setOverwrite] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
-
-  useEffect(() => {
-    if (categories.length === 0) {
-      setCategory("");
-      return;
-    }
-
-    setCategory((current) => (current && categories.includes(current) ? current : categories[0]));
-  }, [categories]);
+  const selectedCategory = category && categories.includes(category) ? category : (categories[0] ?? "");
 
   const submit = () => {
     setMessage(null);
@@ -64,7 +56,7 @@ export function UploadForm({ categories }: Props) {
       return;
     }
     const parsedTags = parseTags(tags);
-    if (!category) {
+    if (!selectedCategory) {
       setMessage({ kind: "err", text: "请选择分类" });
       return;
     }
@@ -74,7 +66,7 @@ export function UploadForm({ categories }: Props) {
     form.set("summary", summary.trim());
     form.set("date", date);
     form.set("tags", parsedTags.join(","));
-    form.set("category", category);
+    form.set("category", selectedCategory);
     if (slug.trim()) form.set("slug", slug.trim());
     if (overwrite) form.set("overwrite", "1");
 
@@ -148,7 +140,7 @@ export function UploadForm({ categories }: Props) {
         <label className="grid gap-2 text-sm">
           <span>分类</span>
           <select
-            value={category}
+            value={selectedCategory}
             onChange={(e) => setCategory(e.target.value)}
             className="rounded-[6px] border border-warm-border bg-warm-background px-3 py-2 text-sm outline-none focus:border-warm-accent"
           >
