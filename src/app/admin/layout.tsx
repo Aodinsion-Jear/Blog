@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LogoutButton } from "@/components/admin/LogoutButton";
 import { getCurrentCommit, getLatestCommit } from "@/lib/updater";
+import "@mdxeditor/editor/style.css";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const current = getCurrentCommit();
@@ -22,6 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <NavLink href="/admin">仪表盘</NavLink>
             <NavLink href="/admin/categories">分类</NavLink>
             <NavLink href="/admin/posts">文章</NavLink>
+            <NavLink href="/admin/posts/new">写文章</NavLink>
             <NavLink href="/admin/posts/upload">上传</NavLink>
             <NavLink href="/admin/update" badge={hasUpdate}>系统更新</NavLink>
             <div className="mt-6 border-t border-warm-border pt-4">

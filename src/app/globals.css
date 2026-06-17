@@ -315,6 +315,122 @@ samp,
   border: 1px solid var(--border);
 }
 
+.admin-md-editor {
+  --basePageBg: var(--surface);
+  --baseBase: var(--surface);
+  --baseBgSubtle: var(--background);
+  --baseBg: rgba(232, 213, 200, 0.32);
+  --baseBgHover: rgba(232, 213, 200, 0.52);
+  --baseBgActive: rgba(232, 213, 200, 0.72);
+  --baseLine: var(--border);
+  --baseBorder: var(--border);
+  --baseBorderHover: rgba(168, 95, 69, 0.46);
+  --baseText: var(--muted);
+  --baseTextContrast: var(--foreground);
+  --accentBase: var(--surface);
+  --accentBgSubtle: rgba(232, 213, 200, 0.35);
+  --accentBg: rgba(232, 213, 200, 0.5);
+  --accentBgHover: rgba(232, 213, 200, 0.68);
+  --accentBgActive: rgba(232, 213, 200, 0.86);
+  --accentLine: var(--accent-soft);
+  --accentBorder: var(--accent);
+  --accentBorderHover: var(--accent-dark);
+  --accentSolid: var(--accent);
+  --accentSolidHover: var(--accent-dark);
+  --accentText: var(--accent-dark);
+  --accentTextContrast: var(--surface);
+  min-height: 640px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.admin-md-toolbar {
+  top: 0;
+  width: 100%;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: rgba(255, 253, 248, 0.96);
+}
+
+.admin-md-editor button,
+.admin-md-editor [role="button"] {
+  cursor: pointer;
+}
+
+.admin-md-editor select,
+.admin-md-editor input {
+  font-family: var(--font-sans);
+}
+
+.admin-md-editor [role="separator"] {
+  flex: 0 0 auto;
+}
+
+.admin-md-editor .cm-sourceView .cm-scroller,
+.admin-md-editor .cm-editor .cm-scroller {
+  min-height: 560px;
+  padding: 1.25rem !important;
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  line-height: 1.75;
+}
+
+.admin-md-editor .cm-editor {
+  background: var(--surface);
+}
+
+.admin-md-content {
+  min-height: 584px;
+  padding: 2rem min(6vw, 4rem);
+  caret-color: var(--accent-dark);
+}
+
+.admin-md-content:focus {
+  outline: none;
+}
+
+.admin-md-content h1:first-child,
+.admin-md-content h2:first-child,
+.admin-md-content h3:first-child,
+.admin-md-content p:first-child {
+  margin-top: 0;
+}
+
+.admin-md-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.admin-md-content th,
+.admin-md-content td {
+  border: 1px solid var(--border);
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+}
+
+.admin-md-content th {
+  background: rgba(232, 213, 200, 0.32);
+  font-weight: 600;
+}
+
+.admin-md-content [data-lexical-decorator="true"] {
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .admin-md-editor {
+    min-height: 560px;
+  }
+
+  .admin-md-content {
+    min-height: 504px;
+    padding: 1.25rem;
+  }
+}
+
 @keyframes img-zoom-in {
   from {
     opacity: 0;

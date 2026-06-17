@@ -315,6 +315,12 @@ function SortablePostRow({
       </Link>
       <span className="hidden text-xs text-warm-muted sm:inline">{post.formattedDate}</span>
       <code className="hidden text-xs text-warm-muted md:inline">{post.slug}</code>
+      <Link
+        href={`/admin/posts/${encodeURIComponent(post.slug)}/edit`}
+        className="rounded-[6px] border border-warm-border px-3 py-1.5 text-xs text-warm-muted transition hover:border-warm-accent/50 hover:text-warm-accent"
+      >
+        编辑
+      </Link>
       <DeletePostButton slug={post.slug} title={post.title} />
     </li>
   );

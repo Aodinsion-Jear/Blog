@@ -4,8 +4,44 @@ import { sanitizeSlug } from "@/lib/paths";
 import { getPostBySlug } from "@/lib/posts";
 import { deletePostFile, reflowOrderForCategory } from "@/lib/postWriter";
 import { verifyAdmin } from "@/lib/adminStore";
+import { PostEditorError, updatePostFromPayload } from "@/lib/postEditor";
 
 type Ctx = { params: Promise<{ slug: string }> };
+
+export async function PATCH(req: Request, { params }: Ctx) {
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid json" }, { status: 400 });
+  }
+
+  const { slug: rawSlug } = await params;
+
+  try {
+    const result = await updatePostFromPayload(decodeURIComponent(rawSlug), body);
+    const categories = new Set([result.previousCategory, result.category]);
+
+    revalidatePath("/");
+    for (const category of categories) {
+      revalidatePath(`/categories/${encodeURIComponent(category)}`);
+    }
+    revalidatePath(`/posts/${result.slug}`);
+    revalidatePath("/admin");
+    revalidatePath("/admin/posts");
+    revalidatePath(`/admin/posts/${result.slug}/edit`);
+
+    console.log(`[admin] updated post slug=${result.slug} category=${result.category}`);
+
+    return NextResponse.json(result);
+  } catch (err) {
+    if (err instanceof PostEditorError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    console.error(`[admin] update post failed slug=${rawSlug}`, err);
+    return NextResponse.json({ error: "internal error" }, { status: 500 });
+  }
+}
 
 export async function DELETE(req: Request, { params }: Ctx) {
   let body: { password?: string };
