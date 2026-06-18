@@ -1,6 +1,6 @@
 # 博客
 
-> 基于 **Next.js + TypeScript + Tailwind CSS + 本地 Markdown** 的极简个人博客。风格温暖克制、留白充足，适合记录技术、设计与日常思考。
+> 基于 **Next.js + TypeScript + Tailwind CSS + 本地 Markdown** 的极简个人博客。
 
 ## 目录
 
@@ -19,6 +19,7 @@
 ## 功能特性
 
 - 📝 本地 Markdown 文章，`gray-matter` 解析 frontmatter，`remark` 渲染（支持 GFM、待办列表）
+- ✍️ 后台可视化 Markdown 编辑器：所见即所得、源码切换、实时预览，也可上传 `.md` 或直接编辑文件
 - 🗂️ 分类管理，文章可跨分类拖拽排序
 - 🔎 全文搜索（标题 / 摘要 / 正文 / 分类 / 标签），带模糊背景的搜索浮层
 - 📑 文章详情页自动按 `##` / `###` 生成目录
@@ -33,8 +34,8 @@
 | 框架 | Next.js（App Router） |
 | 语言 | TypeScript |
 | 样式 | Tailwind CSS |
-| 内容 | 本地 Markdown，`gray-matter` 解析 frontmatter，`remark` + `remark-gfm` 渲染 |
-| 交互 | `@dnd-kit` 拖拽排序（后台） |
+| 内容 | 本地 Markdown，`gray-matter` 解析 frontmatter，`remark` + `remark-gfm` + `remark-html` 渲染，`mdast-util-to-string` + `github-slugger` 生成目录锚点 |
+| 交互 | `@mdxeditor/editor` 可视化 Markdown 编辑、`@dnd-kit` 拖拽排序（均为后台） |
 | 其它 | `next/og` 动态生成 favicon |
 
 ## 快速开始
@@ -89,8 +90,15 @@ src/
     posts/[slug]/page.tsx
     globals.css          # 全局样式与 Markdown 排版
     login/               # 登录页 + server action
-    admin/               # 后台 UI（仪表盘、分类、文章、上传、排序）
-    api/admin/           # 后台 API（categories、posts/upload、posts/reorder、posts 删除）
+    admin/               # 后台 UI
+      posts/             # 文章列表、新建（new/）、编辑（[slug]/edit/）、上传、排序
+                         #   PostEditorForm + RichMarkdownEditor（可视化编辑器）
+                         #   PostCategoryBoard（跨分类拖拽）
+      categories/        # 分类管理
+      update/            # 系统更新面板
+    api/admin/           # 后台 API
+                         #   posts（POST 新建 / PATCH 编辑 / DELETE 删除）、posts/upload、posts/reorder
+                         #   categories、markdown/preview（编辑器预览）、update
   components/
     admin/               # 后台专属组件
     ...                  # 其余前台组件
@@ -103,6 +111,8 @@ src/
     banStore.ts          # IP 封禁记录读写
     categories.ts        # categories.json 读写
     postWriter.ts        # 写 / 删文件、frontmatter 重写、order 分配与重排
+    postEditor.ts        # 新建 / 编辑文章的校验与规范化
+    updater.ts           # GitHub 版本检测与一键更新协调
     paths.ts             # 路径安全拼接、slug / 分类名清洗
 ```
 
@@ -136,10 +146,13 @@ tags: ["Next.js", "Markdown"]
 | `tags` | 否 | 标签，可多个，也可留空 |
 | `order` | 否 | 整数，后台排序使用；首页默认按日期倒序，不依赖它 |
 
-新建文章有两种方式：
+新建文章有三种方式：
 
+- **后台可视化编辑（推荐）**：打开 `/admin/posts/new`，填写 slug、标题、摘要、日期、分类、标签后，在编辑器里写正文——支持所见即所得、Markdown 快捷语法，也可用工具栏切到源码。保存后跳转到 `/admin/posts/<slug>/edit` 可继续修改。编辑已有文章同样走该页面，slug 只读。
+- **后台上传 .md**：打开 `/admin/posts/upload`，选择本地 `.md` 和目标分类提交。上传时 `category` 会被覆盖为所选分类，`order` 自动排到该分类末位，文件名作为默认 slug（可自定义；同名默认拒绝，勾选「覆盖」可强制写入）。
 - **直接编辑文件**：在 `content/posts/` 新建 `.md` 即可。
-- **后台上传**：打开 `/admin/posts/upload`，选择本地 `.md` 和目标分类提交。上传时 `category` 会被覆盖为所选分类，`order` 自动排到该分类末位，文件名作为默认 slug（可自定义；同名默认拒绝，勾选「覆盖」可强制写入）。
+
+保存时后台会校验：标题 ≤ 120 字、摘要 ≤ 300 字、单个标签 ≤ 30 字、正文 ≤ 1MB，日期须为合法 `YYYY-MM-DD`，分类必须已存在。
 
 > 文章详情页会自动按 `##` 和 `###` 标题生成目录；没有这两级标题则不显示目录。
 
@@ -159,7 +172,9 @@ tags: ["Next.js", "Markdown"]
 | 页面 | 路径 | 说明 |
 |------|------|------|
 | 分类管理 | `/admin/categories` | 增删分类、拖拽排序，禁止删除非空分类 |
-| 文章列表 | `/admin/posts` | 按分类分组展示，可删除（需输入密码确认） |
+| 文章列表 | `/admin/posts` | 按分类分组展示，可跨分类拖拽移动、删除（需输入密码确认） |
+| 新建文章 | `/admin/posts/new` | 可视化 Markdown 编辑器，填写元信息并写正文 |
+| 编辑文章 | `/admin/posts/[slug]/edit` | 修改元信息与正文（slug 不可改） |
 | 上传文章 | `/admin/posts/upload` | 上传 `.md` 到指定分类 |
 | 拖拽排序 | `/admin/posts/reorder/[category]` | 拖拽调整顺序，写回每篇文章的 `order` |
 | 系统更新 | `/admin/update` | 检测 GitHub 新版本、查看更新日志、一键拉取更新（需密码确认） |
@@ -395,7 +410,7 @@ tar -czf /root/blog-backup-$(date +%F).tar.gz content data .env
 
 ## 内容与代码同步
 
-后台上传 / 删除会直接修改服务器的 `content/posts/*.md`、`content/categories.json` 和 `data/*.json`，这些**不会自动 commit**。`.gitignore` 已忽略 `node_modules/`、`.next/`、`.env*`、`.claude/` 以及生产可变内容等。
+后台的新建 / 编辑 / 上传 / 删除会直接修改服务器的 `content/posts/*.md`、`content/categories.json` 和 `data/*.json`，这些**不会自动 commit**。`.gitignore` 已忽略 `node_modules/`、`.next/`、`.env*`、`.claude/` 以及生产可变内容等。
 
 建议的协作方式：
 
@@ -415,4 +430,4 @@ git commit -m "Add note"
 git push
 ```
 
-远程后台流程：登录 `/login` → 在 `/admin/posts/upload` 上传 `.md` → 在 `/admin/posts/reorder/<分类>` 调整顺序 → 在 `/admin/posts` 删除多余文章。写入后通过 `revalidatePath` 立即生效，无需重新构建。
+远程后台流程：登录 `/login` → 在 `/admin/posts/new` 写作（或 `/admin/posts/upload` 上传 `.md`）→ 在 `/admin/posts/<slug>/edit` 修改 → 在 `/admin/posts` 拖拽排序、删除多余文章。写入后通过 `revalidatePath` 立即生效，无需重新构建。
